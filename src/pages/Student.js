@@ -1,26 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { addDoc, collection, getDocs } from "firebase/firestore";
-import { getDatabase, ref, push, set,onValue, remove, update } from "firebase/database";
-
+import { addDoc, collection, getDocs, deleteDoc,doc,updateDoc} from "firebase/firestore";
 import { db } from './Firebase'
 
-const Home = () => {
+const Student = () => {
     const [emp, setEmp] = useState([])
     const [input, setInput] = useState({})
-    const [edit , setEdit] = useState()
-     useEffect(() => {
-const dbRef = ref(db, 'employees');
-
-onValue(dbRef, (snapshot) => {
-    const list = []
-  snapshot.forEach((childSnapshot) => {
-    const childKey = childSnapshot.key;
-    const childData = childSnapshot.val();
-    list.push({id:childKey,...childData});
-});
-setEmp(list)
-})
-}, [])
+    const [edit, setEdit] = useState()
+    useEffect(() => {
+        fetchUsers()
+    }, [])
     const fetchEmp = async () => {
         const querySnapshot = await getDocs(collection(db, 'employees'))
         var list = []
@@ -34,29 +22,47 @@ setEmp(list)
     const handleEdit = (id) => {
         const user = emp.filter(data => data.id === id)
         // console.log(user)
-          setEdit(id)
-    setInput({name: user[0].name,email: user[0].email})
+        setEdit(id)
+        setInput({ name: user[0].name, email: user[0].email })
     }
     const handleSubmit = async (e) => {
         e.preventDefault()
-        if(edit){
-await update(ref(db, `employees/${edit}`),input)
+        if (edit) {
+            const userRef = doc(db, "users", edit);
+            const res = await updateDoc(userRef, input);
 
-        }else{
-        const postListRef = ref(db, 'employees');
-        const newPostRef = push(postListRef);
-        set(newPostRef,input) 
-}
-setInput({})
+        } else {
+            try {
+                const docRef = await addDoc(collection(db, "users"), input);
+                console.log("Document written with ID: ", docRef.id);
+            } catch (e) {
+                console.error("Error adding document: ", e);
+            }
+
+        }
+        fetchUsers()
+        setInput({})
     }
     const handleChange = (e) => {
         setInput({ ...input, [e.target.name]: e.target.value })
     }
-    const handleDelete = (id) => {
-        
-        remove(ref(db, `employees/${id}`))
+    const handleDelete = async(id)  => {
+
+        await deleteDoc(doc(db, 'users', id))
+
+
+fetchUsers()
 
     }
+    const fetchUsers = async () => {
+        const querySnapshot = await getDocs(collection(db, "users"));
+        const temp = []
+        querySnapshot.forEach((doc) => {
+            temp.push({ id: doc.id, ...doc.data() })
+        });
+        setEmp(temp)
+    }
+
 
     return (
 
@@ -73,12 +79,12 @@ setInput({})
                         <input type="text" name="email" id="" className='form-control' value={input.email} placeholder='Enter Email' onChange={handleChange} />
                         <br />
                         <br />
-                        <button className='btn btn-primary w-100'>{edit?'UPDATE':'ADD'}</button>
+                        <button className='btn btn-primary w-100'>{edit ? 'UPDATE' : 'ADD'}</button>
                     </form>
                 </div>
 
                 <div className="col-6">
-                    <h1>EMP DETAIL</h1>
+                    <h1>STUDENT DETAILS</h1>
                     <table border={1} className='table '>
                         <thead>
                             <tr>
@@ -97,7 +103,7 @@ setInput({})
                                         <td>
                                             <button onClick={() => handleDelete(item.id)} className='btn btn-danger mx-1'>DELETE</button>
                                         </td>
-                                           <td> <button onClick={() => handleEdit(item.id)} className='btn btn-primary'>EDIT</button></td>
+                                        <td> <button onClick={() => handleEdit(item.id)} className='btn btn-primary'>EDIT</button></td>
                                     </tr>
                                 )
                             }
@@ -112,4 +118,4 @@ setInput({})
     );
 }
 
-export default Home;
+export default Student;
